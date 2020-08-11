@@ -1,0 +1,147 @@
+---
+title: "Tooth_Inference"
+author: "Brian Stewart"
+date: "8/9/2020"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Part 2: Basic Inferential Data Analysis Instructions
+
+## Tooth Growth Instructions
+
+Now in the second portion of the project, we're going to analyze the ToothGrowth data in the R datasets package.
+
+1. Load the ToothGrowth data and perform some basic exploratory data analyses
+2. Provide a basic summary of the data.
+3. Use confidence intervals and/or hypothesis tests to compare tooth growth by supp and dose. (Only use the techniques from class, even if there's other approaches worth considering)
+4. State your conclusions and the assumptions needed for your conclusions.
+
+## Load and Process Data
+
+```{r}
+library(ggplot2)
+library(stats)
+
+data("ToothGrowth")
+```
+
+## Cursory Exploration
+
+Let't get some basic data summary. The size of the data set is `r dim(ToothGrowth)` with three variables: Len which is the length of the tooth, supplement which is the supplement used, and does which is the amount of supplement given.  
+
+```{r}
+summary(ToothGrowth)
+```
+
+The following graph gives us an idea of what that data is measuring and some results we can then base a hypothesis off of. What seems to be the case is that the higher the dose, regardless of what the supplement is, the longer teeth become in the subjects.  
+
+```{r}
+ggplot(ToothGrowth, aes(supp, len)) + geom_boxplot(aes(fill=supp)) + 
+        facet_grid(cols=vars(ToothGrowth$dose)) +
+        labs(x='Supplement Type', y='Tooth Length', title = 'Tooth Growth of Guinea Pigs by Supplement and Dosage(mg)')
+```
+
+
+## Hypothesis
+
+### Assumptions  
+* The variables follow the independent and identical distribution (I.I.D).  
+* Variances change with dosage and supplement type.  
+* The data follows a normal distribution, i.e. centered around the mean.  
+
+### Null Hypothesis  
+Supplement type will not affect tooth growth.
+
+### Alternative Hypothesis  
+Supplement OJ will have a larger affect on tooth growth than supplement VC.  
+
+### Tests 
+
+#### Supplement type 
+
+First we have to subset the data based on the supplement type.  
+
+```{r}
+OJ <- ToothGrowth$len[ToothGrowth$supp == 'OJ']
+
+VC <- ToothGrowth$len[ToothGrowth$supp == 'VC']
+```
+
+Now we can run our T-test to either reject the null or not with unequal variance.  
+
+```{r}
+t.test(OJ, VC, alternative = "greater", paired = FALSE, var.equal = FALSE, conf.level = 0.95)
+```
+
+The P-Value of this test is .03032 which means our findings are significant at < .05 making them reject the null hypothesis. We can ascertain from these values that it is likely the OJ supplement has a greater affect on tooth growth than VC.  
+
+#### Dosage  
+
+Like the supplement test we need to subset our data based on dosage.  
+
+```{r}
+half_dose= ToothGrowth$len[ToothGrowth$dose == 0.5]
+full_dose = ToothGrowth$len[ToothGrowth$dose == 1]
+dbl_dose = ToothGrowth$len[ToothGrowth$dose == 2]
+```
+
+Fist I ran a test on the half dose to the full dose with unequal variance to reject the null hypothesis that dose strength would have no affect on tooth growth.  
+
+```{r}
+t.test(half_dose, full_dose, alternative = "less", paired = FALSE, var.equal = FALSE, conf.level = 0.95)
+```
+
+As we can see from the P-value of < .01 the significance of the variables is at almost 100% and rejects the null hypothesis. Now that we've seen that the next question regarding does would be if the double dose has an equally remarkable significance.  
+
+```{r}
+t.test(full_dose, dbl_dose, alternative = "less", paired = FALSE, var.equal = FALSE, conf.level = 0.95)
+```
+
+Similarly, the P-value is still significant at < .01 rejecting the null meaning that the dosages make a difference in growth.  
+
+I ran one extra test to determine which dosage would be the best for the next tests regarding supplement type at the most influential dosage. The following shows that there is almost no chance of getting a outlier number and is easily the strongest test.  
+```{r}
+t.test(half_dose, dbl_dose, alternative = "less", paired = FALSE, var.equal = FALSE, conf.level = 0.95)
+```
+
+
+
+#### Supplement Type at Most Influential Dosage  
+
+Like the original dosage test we need to subset our data at both the supplement type level and the double dosage level.  
+
+```{r}
+dbl_dose_oj = ToothGrowth$len[ToothGrowth$supp == 'OJ' & ToothGrowth$dose == 2]
+dbl_dose_vc = ToothGrowth$len[ToothGrowth$supp == 'VC' & ToothGrowth$dose == 2]
+```
+
+Now that we have that we can run our T-test on the data.  
+
+```{r}
+t.test(dbl_dose_oj, dbl_dose_vc, alternative = "two.sided", paired = FALSE, var.equal = FALSE, conf.level = 0.95)
+```
+
+Since the P-value of this test is not < .5 we cannot reject the null hypothesis at double dosage. .5 is the default value for tolerance in the error of alpha meaning there is too much potential for outlier values. Also this matches the original boxplot from the beggining of this study that there is a negligiable difference between the two supplements at a double dose. There is far more variance between the two at the half and full dosages. To be sure we can run the T-tests on both of those dosage values.  
+
+```{r}
+full_dose_oj = ToothGrowth$len[ToothGrowth$supp == 'OJ' & ToothGrowth$dose == 1]
+full_dose_vc = ToothGrowth$len[ToothGrowth$supp == 'VC' & ToothGrowth$dose == 1]
+half_dose_oj = ToothGrowth$len[ToothGrowth$supp == 'OJ' & ToothGrowth$dose == .5]
+half_dose_vc = ToothGrowth$len[ToothGrowth$supp == 'VC' & ToothGrowth$dose == .5]
+```
+
+```{r}
+t.test(full_dose_oj, full_dose_vc, alternative = "two.sided", paired = FALSE, var.equal = FALSE, conf.level = 0.95)
+```
+
+```{r}
+t.test(half_dose_oj, half_dose_vc, alternative = "two.sided", paired = FALSE, var.equal = FALSE, conf.level = 0.95)
+```
+
+Both of these test reject the null hypothesis and the OJ supplement does have a more prominent affect at lower dosages.
+
+## Conclusion  
+
+So based on the analysis we have undertaken here. What has been discovered is that dosage and supplement type makes a difference in tooth growth. The only instance where there is no change is at the double dose. While there is a significant change in growth based on the dosage alone there is a negligible change between supplement types at that dosage. Unfortunately there was no control group of non-dosed guinea pigs to solidify these results, but judging by the effects of dosage odds are the same would still be true with the addition of a control group.
